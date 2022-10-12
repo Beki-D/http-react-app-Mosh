@@ -2,6 +2,20 @@ import React, { Component } from "react";
 import axios from "axios";
 import "./App.css";
 
+axios.interceptors.response.use(null, error => {
+  const expectedError = 
+    error.response && 
+    error.response.status >= 400 && 
+    error.response.status < 500;
+
+  if(!expectedError) {
+    console.log("Logging the error ", error);
+    alert("An unexpected error occurred.");
+  }
+  
+  return Promise.reject(error);
+});
+
 const apiEndpoint = 'https://jsonplaceholder.typicode.com/posts';
 
 class App extends Component {
@@ -10,7 +24,7 @@ class App extends Component {
   };
 
   async componentDidMount() {
-    const { data: posts} = await axios.get(apiEndpoint);
+    const { data: posts} = await axios.get("S" + apiEndpoint);
     this.setState({ posts });
   }
 
@@ -24,14 +38,28 @@ class App extends Component {
 
   handleUpdate = async post => {
     post.title = "UPDATED";
-    const { data } = await axios.put(apiEndpoint + "/" + post.id, post);
+    await axios.put(apiEndpoint + "/" + post.id, post);
 
     const posts = [...this.state.posts];
     const index = posts.indexOf(post);
     posts[index] = {...post};
     this.setState({ posts });
-    console.log(data);
   };
+
+  handleDelete = async post => {
+    const originalPosts = this.state.posts;
+
+    const posts = this.state.posts.filter(p => p.id !== post.id);
+    this.setState({ posts });
+  
+    try {
+      await axios.delete("s" + apiEndpoint + '/' + posts);
+    } catch (ex) {
+      if (ex.response && ex.response.status === 404) 
+        alert("Post is already deleted!");
+      this.setState({ posts: originalPosts });
+    }
+  }
 
   render() {
     return (
